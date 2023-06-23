@@ -1,0 +1,38 @@
+
+clear 
+clc 
+SCC = load('/users/aallawa1/data/TRD_Project/DBSTRD/DBSTRD006/EXP/15s_stim/Processed Data/PSD_avg/rSCC_f130_highgamma.mat');
+VCVS = load('/users/aallawa1/data/TRD_Project/DBSTRD/DBSTRD006/EXP/15s_stim/Processed Data/PSD_avg/rVCVS_f130_highgamma.mat');
+roi_info = SCC.metadata.channel_info; 
+roi_names = unique(roi_info.ROI_vis); 
+num_ch = height(roi_info); 
+
+%% get ROI names 
+   j_roi = 5; 
+   currentroi = string(roi_names(j_roi)); 
+   disp(currentroi)
+   
+for ichan = 1:num_ch 
+   if (strcmp(roi_info.ROI_vis{ichan}, string(roi_names{j_roi})) == 1 && strcmp(roi_info.Matter_vis{ichan}, 'Grey') == 1);
+    
+   roi_idx(ichan) = ichan; 
+   end 
+end 
+
+ch_idx = find(roi_idx>0) ; 
+
+SCC_avg = mean(SCC.FOI_poststim_avg(:,ch_idx),2);  
+VCVS_avg = mean(VCVS.FOI_poststim_avg(:,ch_idx),2);  
+
+
+%% plot 
+
+x = [ones(1,70) 2*ones(1,70)]; 
+
+scatter(1,SCC_avg,'filled'); hold on; scatter(2,VCVS_avg,'filled');
+title(currentroi) 
+%% 
+
+
+
+
