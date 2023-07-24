@@ -14,7 +14,7 @@
 function preprocessing_15s_calculations(montageInfo,ch,metadata,outputdir,good_ch_idx,good_ch_labels,summary_ch_info)
 
 %% extract info from metadata
-
+srate_old = metadata.general.SamplingRate; 
 behav_type = metadata.general.Experiment;  
 ChannelLabel = montageInfo.ElectrodeLabels;  
 contacts_perprobe  = montageInfo.ContactsPerProbe;  
@@ -28,6 +28,8 @@ catch
     matter_info = summary_ch_info.csv_montage.Matter_vis; 
 end 
 
+metadata.preprocessing.ROI_info = ROI_info; 
+metadata.preprocessing.matter_info = matter_info; 
 %% initialize preprocessing metadata steps
 
 metadata.preprocessing.Demeaned = false;
@@ -51,7 +53,11 @@ toc
 %% downsample/decimate data 
 tic
 srate_new = 1000; %new sampling rate - going to 1000 Hz from 2000 
-r = 2; %factor for downsampling 
+if srate_old == 30000
+    r = 30 ; 
+elseif srate_old == 2000
+    r = 2; %factor for downsampling 
+end 
 ds_Ch=[];
 
 %downsample data to 1 kHz 
@@ -109,19 +115,21 @@ metadata.preprocessing.BandPassOrder = order;
 metadata.preprocessing.BandPassed = true;
 toc
 %% save bandpass signal data 
-% tic
-% thisfile = sprintf('bandpasssig_%s.mat', behav_type); 
-% fulldestination = fullfile(outputdir, thisfile);  %name file relative to that directory
-% save (fulldestination,'BPsignal','metadata','-v7.3');
-% 
-% disp('--- saving bandpass data ---')
-% toc
+tic
+thisfile = sprintf('bandpasssig_%s.mat', behav_type); 
+fulldestination = fullfile(outputdir, thisfile);  %name file relative to that directory
+save (fulldestination,'BPsignal','metadata','montageInfo','good_ch_idx',...
+    'good_ch_labels','summary_ch_info','-v7.3');
+
+disp('--- saving bandpass data ---')
+toc
 
 %% reference (default method Bipolar, but other methods can be used) 
 tic
 
 BPsignal_noempty = BPsignal;  
-empty_idx = [157,208,209]; 
+%empty_idx = [157,208,209]; 
+empty_idx = montageInfo.EmptyChannelIndices; 
 BPsignal_noempty(empty_idx,:) = []; 
 summary_ch_info.csv_montage(empty_idx,:) = []; 
 summary_ch_info.NSP_labels(empty_idx) = []; 
@@ -134,6 +142,13 @@ disp('finished re-referencing')
 metadata.preprocessing.Referenced = true;
 metadata.preprocessing.ReferenceMethod = ref_method;
 toc
+
+%% index of good and bad channels 
+
+% metadata
+metadata.preprocessing.GoodChannelsIdx = good_ch_idx;
+metadata.preprocessing.GoodChannelLabels = good_ch_labels;
+metadata.preprocessing.ChannelTbl = summary_ch_info; 
 %% Plot re-referenced signals to identify bad channels 
 tic
 end_ch = size(all_ref_signals,1); 
@@ -158,12 +173,6 @@ ElectrodeID = montageInfo.MacroContactIndices; %Channel number
 % toc
 
 
-%% index of good and bad channels 
-
-% metadata
-metadata.preprocessing.GoodChannelsIdx = good_ch_idx;
-metadata.preprocessing.GoodChannelLabels = good_ch_labels;
-metadata.preprocessing.ChannelTbl = summary_ch_info; 
 %% save referenced signals 
 
 %index referenced signals 
